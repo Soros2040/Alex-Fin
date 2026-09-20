@@ -5,3 +5,5 @@ Add one Markdown record per reviewed contribution using the [English template](.
 每项经审阅的贡献建立一份记录，关联 Issue、来源、实际检查及合并的 PR/提交。本目录是开放的贡献登记入口，创建目录本身不代表已取得外部审阅或认可。
 
 See the [worked example](example-review.md) / [完整示例](example-review.zh-CN.md).
+
+The [first review template and Table 6-5 example](first-review.md) connect the expanded learning cases to this register. / [首次复核模板与表 6-5 示例](first-review.md)连接深化案例与本登记入口。

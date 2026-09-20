@@ -1,0 +1,32 @@
+[
+  {
+    "file": "multifrequency-architecture.png",
+    "original_embedded_file": "image3.png",
+    "source_work": "Alex-Fin: multi-frequency spatio-temporal graph networks and deep reinforcement learning for adaptive dynamic portfolio optimization",
+    "source_location": "Method: multi-frequency input, GLASSO-DY, and MB-PSTSA-GNN",
+    "source_url": "https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper",
+    "sha256": "50fbde8cba59880ccec27c6f1b08b90ea06dcb18f358ae390724458e93fa8af8",
+    "transformation": "byte-for-byte copy",
+    "evidence_role": "historical manuscript illustration",
+    "used_in": [
+      "README.md",
+      "README.zh-CN.md",
+      "cases/01-causal-multifrequency-graphs.md",
+      "cases/01-causal-multifrequency-graphs.zh-CN.md"
+    ]
+  },
+  {
+    "file": "risk-graph.png",
+    "original_embedded_file": "image5.png",
+    "source_work": "Alex-Fin: multi-frequency spatio-temporal graph networks and deep reinforcement learning for adaptive dynamic portfolio optimization",
+    "source_location": "Method: frequency-specific risk graph construction",
+    "source_url": "https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper",
+    "sha256": "564ce302a42e8de82c9f28f55d1407662f1fa26d83d08024e5e3c583a7b33a73",
+    "transformation": "byte-for-byte copy",
+    "evidence_role": "historical manuscript illustration",
+    "used_in": [
+      "cases/01-causal-multifrequency-graphs.md",
+      "cases/01-causal-multifrequency-graphs.zh-CN.md"
+    ]
+  }
+]

@@ -10,4 +10,6 @@ project. This edition links to Qlib and does not include its source tree.
 Qlib's own MIT license and upstream attribution continue to apply to Qlib.
 
 Original public documentation is licensed as stated in LICENSE-DOCS.
-The research manuscript and third-party financial datasets are not included.
+The complete manuscript is published as a linked work in Julius' future.
+Two unchanged author-provided original illustrations are included with provenance
+in docs/assets/manuscript. Third-party financial datasets are not included.

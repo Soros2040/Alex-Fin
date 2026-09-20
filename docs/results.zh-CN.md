@@ -4,6 +4,25 @@
 
 作者提供的 Alex-Fin 投资组合研究稿报告：主要样本外实验的年化收益率为 18.72%，年化夏普比率为 1.43，最大回撤为 12.65%。作者确认这些数值来自已经开展的研究实验。本页明确记录其证据状态：数值已与研究稿表 6-1 核对，本公开版本尚未独立复跑完整实验。
 
+
+## 完整表格索引
+
+[中文完整稿与 PDF](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper)保留历史记录。表 6-1 至 6-7、表 7-1 的全部行已收入下列双语案例。案例保留回撤负号，本页摘要使用正的损失幅度。
+
+| 原表 | 内容 | 完整阅读 |
+| --- | --- | --- |
+| 6-1 | 十模型比较 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+| 6-2 | 五种频率设置 | [案例一](../cases/01-causal-multifrequency-graphs.zh-CN.md) |
+| 6-3 | MoE 与市场行情 | [案例一](../cases/01-causal-multifrequency-graphs.zh-CN.md) |
+| 6-4 | GRPO/PPO 收敛与泛化 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+| 6-5 | 四模型与市场行情 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+| 6-6 | 三模型与波动率区间 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+| 6-7 | 五个行业 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+| 7-1 | 完整模型与五个消融 | [案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md) |
+
+深入解读记录两项解释冲突：表 6-5 的 PPO 熊市夏普同样为正；表 7-1 的 DSR 奖励替换比移除 MoE 产生更大的夏普下降。还列出未归类的行情日期，并说明 epoch 数为何不能证明实际耗时效率。这些说明保留原始数据，限定相应结论。
+
+
 ## 论文报告的对照结果
 
 | 模型 | 年化收益率 | 年化波动率 | 最大回撤幅度 | 年化夏普比率 | 卡尔玛比率 | 原表标注的年化换手率 |

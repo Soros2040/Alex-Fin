@@ -5,6 +5,8 @@
 
 Start by reading the project question and the relevant chapter. Contributions should leave a claim, explanation or workflow easier to understand and check.
 
+Use the [copyable first review record](contributions/first-review.md) to turn a manuscript claim or source question into an assessable contribution. It includes a complete Table 6-5 review example.
+
 ## Choose a first task
 
 | Task | Deliverable | Acceptance criterion | Claim status |

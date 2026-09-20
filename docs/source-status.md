@@ -42,6 +42,10 @@ These are findings from the released source, not conclusions about which exact c
 
 The code is useful for studying concrete modules and designing corrections. Until these issues are resolved and the run provenance is established, it should not be presented as a verified reproduction of Table 6-1.
 
+The expanded [model case](../cases/01-causal-multifrequency-graphs.md) also checks expert computation and graph statistics: all routed experts are evaluated before selection; auxiliary load balancing and the implemented orthogonality term differ from the manuscript; column-normalized adjacency makes `sum(A)/N` constant when every column sums to one. The [evaluation case](../cases/02-risk-rewards-and-evaluation.md) traces the five/one/one-year manuscript protocol against seven/one/one-year runner defaults, and notes that the final training report evaluates the final rolling test slice. These are source-reading findings; this documentation update did not execute the model, tests, notebooks, or experiments.
+
+深化后的[模型案例](../cases/01-causal-multifrequency-graphs.zh-CN.md)继续核对专家计算与图统计：源码先计算所有路由专家再选择，辅助负载均衡与正交项和稿件有差异，各列和为一时邻接矩阵的 `sum(A)/N` 恒定。[评估案例](../cases/02-risk-rewards-and-evaluation.zh-CN.md)对照稿件五／一／一年窗口和运行器七／一／一年默认值，并指出训练最终报告只评估最后一个滚动测试切片。这些是源码阅读发现，本次文档深化没有执行模型、测试、Notebook 或实验。
+
 这些源码可用于研究具体模块和设计改进。在解决问题并建立运行来源对应关系之前，不能将它称为表 6-1 的已验证复现。
 
 ## Bounded checks / 小范围检查

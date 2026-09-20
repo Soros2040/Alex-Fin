@@ -4,6 +4,25 @@ English | [简体中文](results.zh-CN.md) · [Home](../README.md)
 
 The author-supplied Alex-Fin portfolio manuscript reports 18.72% annualized return, a 1.43 annualized Sharpe ratio, and 12.65% maximum drawdown in its principal out-of-sample experiment. The author confirms these refer to completed research experiments. This page records that evidence level explicitly: the figures have been checked against manuscript Table 6-1, while the full experiment has not been independently rerun from this public edition.
 
+
+## Complete table register
+
+The [full Chinese manuscript and PDF](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper) preserve the historical record. All rows of Tables 6-1 through 6-7 and 7-1 are transcribed in the two bilingual cases below. The cases preserve negative drawdown signs; the summary on this page displays positive loss magnitudes.
+
+| Source table | Subject | Complete reading |
+| --- | --- | --- |
+| 6-1 | Ten-model comparison | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+| 6-2 | Five frequency settings | [Case 1](../cases/01-causal-multifrequency-graphs.md) |
+| 6-3 | MoE across market regimes | [Case 1](../cases/01-causal-multifrequency-graphs.md) |
+| 6-4 | GRPO/PPO convergence and generalization | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+| 6-5 | Four models across market regimes | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+| 6-6 | Three models across volatility regimes | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+| 6-7 | Five sectors | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+| 7-1 | Full model and five ablations | [Case 2](../cases/02-risk-rewards-and-evaluation.md) |
+
+The detailed reading records two interpretation conflicts: PPO also has positive bear-market Sharpe in Table 6-5, and the DSR replacement has a larger Sharpe decline than MoE removal in Table 7-1. It also identifies unassigned market-regime dates and explains why epoch counts do not establish wall-clock efficiency. These findings preserve the original data while narrowing the conclusions.
+
+
 ## Reported comparison
 
 | Model | Annualized return | Annualized volatility | Maximum drawdown magnitude | Annualized Sharpe | Calmar | Annualized turnover, as labeled |

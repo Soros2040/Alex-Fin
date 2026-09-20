@@ -1,124 +1,147 @@
-# Case 1 — Build a multi-frequency graph without future information
+# Case 1 — From multi-frequency observations to graphs, experts, and a policy
 
-English | [简体中文](01-causal-multifrequency-graphs.zh-CN.md) · [Architecture](../docs/architecture.md) · [Next case](02-risk-rewards-and-evaluation.md)
+English | [简体中文](01-causal-multifrequency-graphs.zh-CN.md) · [Home](../README.md) · [Case 2](02-risk-rewards-and-evaluation.md)
 
-**Question:** At today's decision time, which observations can a portfolio policy use, and what exactly does an edge between two assets tell it?
+**Research question:** can a portfolio model preserve information arriving at different speeds, represent relationships between assets, and adapt its representation before choosing weights?
 
-This case connects two parts of Alex-Fin: representing data at different frequencies and giving spatial attention a graph. All numbers below are teaching examples, independent of the manuscript experiment. A calculator and basic matrix knowledge are sufficient; no dataset download or model training is required. Allow about 60–90 minutes.
+This case follows the [complete research manuscript](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper) and [architecture manuscript](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-architecture), then checks their interfaces against the released source. Prerequisites are matrix algebra, covariance, attention, and portfolio weights. Numerical examples are hand calculations; experiment tables are historical manuscript records. Reading and contributing require no training run.
 
-## Learning objectives
+## 1. Follow the original design
 
-By the end, you should be able to distinguish an event date from an availability date, construct a causal attention mask, calculate a conditional-dependence edge, and explain why an asymmetric matrix does not automatically measure directional risk transmission.
+![Original Alex-Fin multi-frequency and graph architecture](../docs/assets/manuscript/multifrequency-architecture.png)
 
-## 1. Put the decision on a timeline
+**Original manuscript illustration:** seven frequency branches feed GLASSO-DY and MB-PSTSA-GNN. Chinese labels describe native-frequency patches and time-based masks. The image is unchanged; the source implements a narrower route below. [Figure provenance](../docs/assets/manuscript/README.md).
 
-Suppose a policy forms its target portfolio at **15:05 on April 29, 2024**, using information available by that instant, and trades at the next opening. The following observations belong to its candidate feature store:
+The design poses four questions: which observations are available, which asset relations guide aggregation, which features are shared or specialized, and how the representation becomes a portfolio. A module name is insufficient: its tensor axes, estimation window, and accounting contract determine the answer.
 
-| Observation | Period or event time | Available time | Usable at the cutoff? |
-| --- | --- | --- | --- |
-| One-minute bar | April 29, 14:59–15:00 | April 29, 15:00:02 | Yes |
-| Final daily close | April 29, 15:00 | April 29, 15:01 | Yes |
-| First-quarter earnings | Quarter ended March 31 | April 30, 18:00 | No |
-| Corrected historical volume | April 26 | April 30, 09:00 | No; use the previously available version |
-| Completed weekly bar | Week ended April 26 | April 26, 15:02 | Yes |
+## 2. Establish availability before aligning frequencies
 
-The relevant predicate is `available_at <= decision_cutoff`. A database may attach a financial statement to March 31 because that is the reporting period. Joining it to March trading dates would leak a later announcement. Likewise, historical revisions need a version timestamp if the experiment claims to reproduce what was knowable at the time.
-
-At the cutoff, the policy may know the closing price, but it cannot also assume that a trade triggered by that completed close was filled at the same close without a specified executable mechanism. This case uses the next opening to make the ordering explicit.
-
-## 2. Keep sequence length separate from embedding width
-
-Let $X_f\in\mathbb R^{T_f\times N\times d_f}$ hold observations at frequency $f$. Each frequency can have its own history length $T_f$, feature width $d_f$, and patch size $P_f$. A projection maps a valid patch into a common width $D$:
+The paper uses second, minute, hour, day, week, month, and quarter observations. Let $X_f\in\mathbb R^{T_f\times N\times d_f}$ denote time positions, assets, and input features. Projecting a patch of length $P_f$ to width $D$ gives:
 
 $$
-z_{f,k,i}=W_f\,\operatorname{vec}(\operatorname{Norm}(X_{f,k,i}))+e_f+e_i.
+z_{f,k,i}=W_f\operatorname{vec}(\operatorname{Norm}(X_{f,k,i}))+e_f+e_i.
 $$
 
-$e_f$ identifies frequency and $e_i$ identifies the asset. A common hidden width makes attention compatible; it does not make the sequences equal in length or equal in informational content. Do not manufacture minute observations by repeating a quarterly report.
+Frequency embeddings identify a branch; they cannot recover missing observations. Equal embedding width does not imply equal sequence length. The manuscript uses $D=256$ and eight attention heads; `TrainConfig` supplies these values, while standalone encoder defaults are $D=128$ and four heads.
 
-Patch normalization uses only the observations in an available patch. A partial patch needs a declared rule: exclude it or encode it with a validity mask. Padding with zeros without a mask confuses “not observed” with a real zero return.
-
-For query token $q$ at decision time $t_q$ and key token $k$ with availability $a_k$, a simple causal mask is
+A close available at 15:01 can enter a 15:05 decision. A first-quarter statement published on April 30 cannot enter an April 29 decision because its reporting period ended on March 31. Preserve event time, availability time, and revision time. A valid attention mask satisfies
 
 $$
-M_{qk}=\begin{cases}0,&a_k\le t_q\\-\infty,&a_k>t_q.\end{cases}
+M_{qk}=\begin{cases}0,&a_k\le t_q,\\-\infty,&a_k>t_q,\end{cases}
+\qquad \operatorname{Attention}(Q,K,V)=\operatorname{softmax}(QK^\top/\sqrt D+M)V.
 $$
 
-Then attention uses $\operatorname{softmax}(QK^\top/\sqrt D+M)V$. Availability masks also need to exclude invalid or padded observations. Fitting a scaler, selecting features, or estimating a graph on the entire dataset can still leak the future even if this attention mask is correct.
+Here $a_k$ is availability, not row order. A quarterly token can attend to an earlier minute token if it satisfies the cutoff. A triangle over assets cannot enforce this temporal rule. The paper pairs decisions using the completed close with execution at the next opening.
 
-## 3. Calculate an interpretable graph edge
+[`_build_multi_frequency_inputs`](../src/training/trainer.py) currently resamples daily closes into week, month, and quarter endpoints, calculates percentage changes, zero-pads history, and returns `[batch, asset, lookback]`. These are four views of daily data, not seven independently observed streams. A source review should record endpoint labels, incomplete periods, missingness, and whether each value existed at the cutoff.
 
-A covariance matrix measures marginal co-movement. Its inverse, the precision matrix $\Omega$, captures conditional relationships under a multivariate Gaussian model. Suppose three assets have the following positive-definite precision matrix:
+## 3. Define what a graph edge means
 
-$$
-\Omega=\begin{pmatrix}1&-0.5&0\\-0.5&2&-0.5\\0&-0.5&1\end{pmatrix}.
-$$
-
-Partial correlation is
+For covariance estimate $S$, Graphical Lasso estimates a sparse precision matrix:
 
 $$
-\rho_{ij\mid\mathrm{others}}=-\frac{\Omega_{ij}}{\sqrt{\Omega_{ii}\Omega_{jj}}}.
+\widehat\Omega=\arg\min_{\Omega\succ0}\{\operatorname{tr}(S\Omega)-\log\det\Omega+\lambda\sum_{i\ne j}|\Omega_{ij}|\}.
 $$
 
-Therefore $\rho_{12}=\rho_{23}=0.5/\sqrt2\approx0.3536$ and $\rho_{13}=0$. The graph contains edges 1–2 and 2–3. Under the stated Gaussian model, assets 1 and 3 are conditionally independent given asset 2. This does not imply that their unconditional correlation is zero, nor that asset 2 causes either asset's returns.
+Under a Gaussian interpretation, $\rho_{ij\mid-ij}=-\Omega_{ij}/\sqrt{\Omega_{ii}\Omega_{jj}}$ describes conditional association. Diagonal entries $4,9$ and off-diagonal entry $-3$ give $0.5$. This symmetric association does not establish intervention-based causation.
 
-Graphical Lasso estimates a sparse positive-definite $\Omega$ by balancing data fit and an off-diagonal sparsity penalty. Sparsity is a modeling choice, not a significance test. Choose its strength using training or validation periods and document the convention for penalizing diagonal entries.
-
-## 4. Do not mistake normalization for transmission
-
-Square the off-diagonal entries of the example matrix, set the diagonal to zero, and normalize each nonempty row. The result is
+The paper and [`_dy_decomposition`](../src/agents/glasso_dy.py) use a variance-weighted squared-precision expression:
 
 $$
-A=\begin{pmatrix}0&1&0\\0.5&0&0.5\\0&1&0\end{pmatrix}.
+d_{ij}=\frac{\sigma_{jj}^{-1}\Omega_{ij}^{2}}{\sum_k\sigma_{kk}^{-1}\Omega_{ik}^{2}}.
 $$
 
-Now $A_{12}=1$ while $A_{21}=0.5$. The asymmetry came from different row totals, although the original relationship was symmetric. We have learned how each node divides attention among its neighbors. We have not identified a time direction or forecast horizon for a shock.
+For row $[2,1]$ and variances $[1,4]$, the components are $4/4.25\approx0.9412$ and $0.25/4.25\approx0.0588$. Squaring discards the sign. Different denominators can produce asymmetry, but neither operation introduces a forecast horizon.
 
-A standard generalized forecast-error variance decomposition requires temporal dynamics. For a fitted VAR with moving-average coefficients $\Phi_h$ and innovation covariance $\Sigma$, a common form is
+A conventional generalized forecast-error variance decomposition additionally needs a fitted dynamic model, impulse-response matrices, innovation covariance, and horizon summation. The function accepts `H=5` but does not use it. Treat its output as the implemented graph proxy; interpreting it as a verified five-step Diebold–Yilmaz measure requires a separate derivation. [Primary references](../docs/sources.md).
 
-$$
-\theta_{ij}(H)=\frac{\sigma_{jj}^{-1}\sum_{h=0}^{H-1}(e_i^\top\Phi_h\Sigma e_j)^2}{\sum_{h=0}^{H-1}e_i^\top\Phi_h\Sigma\Phi_h^\top e_i}.
-$$
+![Original manuscript graph illustration](../docs/assets/manuscript/risk-graph.png)
 
-The forecast horizon $H$ and lag propagation $\Phi_h$ are part of the definition. Generalized shares may require row normalization. Even this predictive connectedness should not be relabeled as structural causality without identification assumptions.
+**Original graph illustration:** placed beside graph construction in the manuscript. No dated edge matrix or run manifest accompanies it. It illustrates the graph presentation rather than validating a transmission estimate. Missing glyphs in the original heading remain unchanged.
 
-Alex-Fin's manuscript proposes a precision-based GLASSO-DY variant. To study it fairly, implement the stated formula under its own name, document its edge interpretation, and compare it with a temporal estimator rather than assuming equivalence. If diagonals are removed, decide whether to renormalize afterward; the operations are not interchangeable. For an isolated node, retain its own representation through a residual or self-loop rule rather than dividing by zero.
+`_row_normalize_spillover` zeroes the diagonal and normalizes **columns**, defining `A[i,j]` as `j → i`. Zero columns receive uniform off-diagonal weights. When every column is normalized, `sum(A)/N` is mechanically one. Consequently that exported statistic cannot measure changing total system risk. This is a consequence of the normalization, ascertainable without running code.
 
-## 5. Send the graph into attention
+## 4. Track the encoder's axes
 
-For asset $i$, graph attention aggregates only permitted neighbors:
+The manuscript proposes parallel temporal and spatial branches: mix valid times for one asset, and mix asset neighbors at a usable time. A graph-bias interface can be written as
 
 $$
-h'_i=\sum_{j\in\mathcal N(i)}\alpha_{ij}Wh_j,\qquad
-\alpha_{ij}=\frac{\exp(e_{ij})}{\sum_{k\in\mathcal N(i)}\exp(e_{ik})}.
+S_{ij}=q_i^\top k_j/\sqrt D+\beta A_{ij},\qquad h_i^{space}=\sum_j\operatorname{softmax}_j(S_{ij})v_j.
 $$
 
-Choose an edge convention once. In this case, row $i$, column $j$ means “asset $i$ receives information from asset $j$.” A graph prior controls which interactions are allowed; learned attention weights determine their relative contribution. An attention weight is not itself a causal effect or a portfolio position.
+A bias changes relative scores; a hard mask forbids edges. A specification must select its rule, including self-loops and zero edges, before claiming that a graph constrains attention. The manuscript then fuses branches and exchanges frequency tokens using timestamps.
 
-Estimate each graph using the corresponding frequency's history available at the cutoff. A monthly graph can update less often than a minute graph. Record its last estimation time so a learner can inspect whether a relation was stale or unavailable.
+In [`MBPSTSAGNNEncoder.forward`](../src/agents/mbpstsa_gnn.py), the actual path is:
 
-## Inspect the released implementation
+| Operation | Tensor/interface | Interpretation |
+| --- | --- | --- |
+| Input projection | `[B,N,L] → [B,N,D]` | Lookback is absorbed into a projection. |
+| Frequency addition | One frequency vector per asset token | Branch identity is explicit. |
+| `time_attn` | Attention over `N`, with an `N × N` triangular mask | Its sequence axis is assets, not retained times. |
+| `_space_attention` | `adjacency` is passed; its addition is commented out | Current output is independent of the graph. |
+| Cross-frequency attention | `[B,N,F,D] → [B*N,F,D]` | Frequency summaries mix separately for each asset. |
+| Frequency mean | `[B,N,D]` | Token timestamps have already been compressed. |
 
-Read [frequency_embedding.py](../src/agents/frequency_embedding.py), [glasso_dy.py](../src/agents/glasso_dy.py), and [mbpstsa_gnn.py](../src/agents/mbpstsa_gnn.py). In the source snapshot, `_dy_decomposition` exposes a horizon parameter without using it; the subsequent normalization is by column. The encoder accepts adjacency but currently leaves its use commented out. These are concrete audit tasks, so the equations above describe the learning concepts rather than silently certifying that this implementation satisfies them.
+Spatial attention also receives `h_time`, making this part sequential. This concrete source snapshot needs alignment before it represents the paper's parallel native-time graph architecture. A manuscript graph ablation cannot automatically be attributed to this revision.
 
-Trace the tensor shape immediately after `input_proj`: the lookback is compressed into the embedding, leaving the asset axis as the sequence dimension. Check whether the following `time_attn` and triangular mask therefore have the intended temporal meaning. A useful exercise is to permute asset order and compare the correspondingly unpermuted outputs. Read the [implementation findings](../docs/source-status.md) before interpreting a successful shape test as a methodological validation.
+## 5. Read experts as a computation
 
-## Exercises
+The design uses one shared expert and eight routed experts, selecting two routed outputs per token:
 
-1. Move the decision cutoff to April 29 at 14:59:30. Which rows in the observation table become unavailable?
-2. Compute the three partial correlations and all nonzero entries of $A$ by hand. Explain the source of its asymmetry in one sentence.
-3. Remove asset 2's edges. Define what its spatial layer should do and how you would test that behavior.
-4. Design a comparison between a partial-correlation graph and a forecast-error spillover graph. Keep the policy, time split, random seeds, and graph sparsity budget comparable.
-5. Write a short contribution containing a timestamp table, one numerical assertion, a source reference, and a proposed test. State what observation would falsify your claim.
+$$
+y=x+E_{shared}(\operatorname{RMSNorm}(x))+
+\sum_{k\in\operatorname{Top2}(g(x)+b)}\widetilde p_k E_k(\operatorname{RMSNorm}(x)).
+$$
 
-## Answer checks
+Selected probabilities $0.4$ and $0.2$ renormalize to $2/3$ and $1/3$. The shared path is always active. Specialization must be assessed with routing and representations; Top-2 alone cannot identify bull-market and bear-market experts.
 
-At 14:59:30, the final minute bar and daily close are unavailable; the completed previous week's bar remains available. The quarter report and revision remain unavailable. The three correlations are approximately 0.3536, 0.3536, and zero. Row normalization produces the 1 versus 0.5 edge weights because the middle asset has two equal neighbors while each outer asset has one.
+[`AdaptiveMoE.forward`](../src/agents/moe.py) implements RMSNorm, SwiGLU, Top-2 weights, bias updates, and residual LayerNorm. Three distinctions matter:
 
-For an isolated node, an explicit residual-only output or a documented self-loop gives finite behavior; the test should verify finiteness and absence of messages from excluded nodes. A graph comparison should report both predictive results and graph stability. Stronger predictive performance alone does not establish a causal interpretation.
+- It evaluates **all eight** expert networks before weighting selected outputs. Sparse selection is not yet sparse computation.
+- The paper specifies auxiliary-loss-free balancing; the source adds squared load-balance and orthogonality losses to the policy objective.
+- Its orthogonality term compares shared output with the combined routed output. The paper describes pairwise constraints among the shared and selected experts. Cancellation in a mixture is not equivalent to pairwise orthogonality.
 
-## Sources and next step
+[`_compose_state_embed`](../src/training/trainer.py) then averages asset features and adds padded risk factors. [`GRPOPolicy`](../src/agents/grpo.py) maps the state to Gaussian latent actions and Softmax weights. Case 2 examines reward and evaluation.
 
-Read [Graphical Lasso](https://doi.org/10.1093/biostatistics/kxm045), [Diebold–Yilmaz connectedness](https://doi.org/10.1016/j.ijforecast.2011.02.006), and [Graph Attention Networks](https://arxiv.org/abs/1710.10903). [FinCast](https://arxiv.org/abs/2508.19609) provides background on financial forecasting across temporal resolutions. [Project source notes](../docs/sources.md) connect these references to the manuscript.
+## 6. Read the existing mechanism evidence
 
-Continue with [Case 2](02-risk-rewards-and-evaluation.md) to turn target weights into an economically meaningful result.
+All rows of manuscript Tables 6-2 and 6-3 appear below. They belong to the stated January 2017–February 2026 out-of-sample study. Run configurations, seeds, and daily outputs are needed to associate them with an executable revision. Drawdowns retain the original negative-return sign.
+
+### Table 6-2 — Frequency input settings
+
+| Input | Annualized return | Annualized Sharpe | Maximum drawdown |
+| --- | ---: | ---: | ---: |
+| All seven frequencies | 18.72% | 1.43 | -12.65% |
+| Daily only | 13.15% | 0.92 | -20.37% |
+| High frequency only: second/minute/hour | 10.62% | 0.68 | -24.51% |
+| Low frequency only: week/month/quarter | 9.84% | 0.57 | -26.83% |
+| Conventional up/downsampled alignment | 12.47% | 0.83 | -21.69% |
+
+Daily-only Sharpe declines by $1.43-0.92=0.51$, or $35.66\%$. This motivates checking extra information. It does not isolate coverage, capacity, alignment, or tuning-budget effects. A fair comparison needs those controls. The current daily-data builder cannot alone recreate the seven-frequency comparison.
+
+### Table 6-3 — Experts across regimes
+
+| Setting | Bull Sharpe | Bear Sharpe | Sideways Sharpe | Full-period Sharpe |
+| --- | ---: | ---: | ---: | ---: |
+| Full Alex-Fin | 1.57 | 0.98 | 1.36 | 1.43 |
+| MoE removed | 1.12 | -0.15 | 0.87 | 0.87 |
+
+The bear-market sign change is a reported contrast. To interpret it as specialization, request regime rules, routing distributions, a matched-capacity replacement, and seed uncertainty. Performance differences do not reveal which expert learned which economic mechanism. Case 2 records the regime dates and coverage gaps.
+
+## 7. Source reading and contribution tasks
+
+| Source | Inspect | Reading output |
+| --- | --- | --- |
+| [Frequency embedding](../src/agents/frequency_embedding.py), [input builder](../src/training/trainer.py) | Identifiers, padding, endpoints | Availability table for one decision. |
+| [Graph estimator](../src/agents/glasso_dy.py) | Fallback, horizon, direction, normalization | Formula-to-function correspondence. |
+| [Encoder](../src/agents/mbpstsa_gnn.py) | Axes and actual graph use | Annotated shape trace. |
+| [Experts](../src/agents/moe.py) | Routing computation and losses | Design-to-source comparison. |
+| [Policy](../src/agents/grpo.py) | Latent density and portfolio weights | Action-space explanation. |
+
+**Task A — axis review.** Claim an issue and copy the [contribution record](../contributions/first-review.md). Trace `[B,N,L]` to the policy. Acceptance: name every axis and the mask axis; distinguish source facts from proposed changes.
+
+**Task B — graph semantics.** Derive why column normalization fixes the matrix sum, and identify where a forecast horizon must enter a dynamic decomposition. Acceptance: equations, exact functions, and a primary methodological source.
+
+**Task C — mechanism evidence.** Select a row of Table 6-2 or 6-3 and write its minimum comparison manifest. Acceptance: original numbers plus availability, capacity/tuning controls, and uncertainty requirements.
+
+Submit a focused record under `contributions/` through the [workflow](../CONTRIBUTING.md). These tasks require reading and derivation, not experiment execution.

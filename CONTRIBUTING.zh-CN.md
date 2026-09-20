@@ -1,9 +1,11 @@
-[English](CONTRIBUTING.zh-CN.md) · [简体中文](CONTRIBUTING.zh-CN.md)
+[English](CONTRIBUTING.md) · 简体中文
 
 
 # 贡献指南
 
 先阅读项目问题与相关章节。贡献应让一条表述、一段解释或一项工作流更容易理解与检查。
+
+使用[可复制的首次复核记录](contributions/first-review.md)，将一个稿件表述或源码问题转为可验收贡献；其中包含表 6-5 的完整复核例子。
 
 ## 选择第一次任务
 

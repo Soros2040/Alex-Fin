@@ -6,6 +6,12 @@ Alex-Fin models allocation as a sequential decision problem. At a decision cutof
 
 This page summarizes the author-supplied portfolio manuscript and architecture document. It describes the intended research system. The [source map and implementation review](source-status.md) identify the released modules and their current differences from this design. Run artifacts needed for a public reproduction are listed in [Results](results.md).
 
+
+## Complete works and detailed reading
+
+The Chinese [research manuscript](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper) and [architecture manuscript](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-architecture) provide full text, PDF, figures, and source-position maps with bilingual guides. [Case 1](../cases/01-causal-multifrequency-graphs.md) follows the actual tensor axes, graph transformation, experts, and policy interface. [Case 2](../cases/02-risk-rewards-and-evaluation.md) completes the accounting and evaluation chain. Their tables distinguish historical design from current implementation.
+
+
 ## Modules and interfaces
 
 | Module | Input | Output | Main responsibility |

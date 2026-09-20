@@ -6,6 +6,12 @@ Alex-Fin 把资产配置建模为序列决策问题。策略在决策截止时�
 
 本页依据作者提供的投资组合研究稿与架构文档重新撰写，说明研究系统的设计。已发布模块及其与设计的当前差异见[源码导航与实现核查](source-status.md)，公开复现需要的运行材料见[实验结果](results.zh-CN.md)。
 
+
+## 完整作品与深入阅读
+
+中文[完整研究稿](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper)和[架构稿](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-architecture)提供全文、PDF、图片与原位置映射，并配有双语导读。[案例一](../cases/01-causal-multifrequency-graphs.zh-CN.md)追踪实际张量轴、图变换、专家和策略接口；[案例二](../cases/02-risk-rewards-and-evaluation.zh-CN.md)补齐核算与评估链条，分别记录历史设计和当前实现。
+
+
 ## 模块与接口
 
 | 模块 | 输入 | 输出 | 核心职责 |

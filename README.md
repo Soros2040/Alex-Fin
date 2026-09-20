@@ -1,89 +1,75 @@
 # Alex-Fin
 
-**Adaptive portfolio allocation with multi-frequency graphs and reinforcement learning.**
+**Multi-frequency graphs, adaptive experts, and reinforcement learning for portfolio allocation.**
 
 English | [简体中文](README.zh-CN.md)
 
-[Architecture](docs/architecture.md) · [Reported results](docs/results.md) · [Start learning](cases/01-causal-multifrequency-graphs.md) · [Contribute](CONTRIBUTING.md)
+[Read the complete work](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper) · [Start with Case 1](cases/01-causal-multifrequency-graphs.md) · [Inspect all results](cases/02-risk-rewards-and-evaluation.md) · [Contribute](CONTRIBUTING.md)
 
-Alex-Fin studies how an investment policy can combine information arriving at different speeds, learn relationships among assets, and adapt its allocations as markets change. Its research design connects frequency-specific risk graphs, parallel temporal and spatial attention, sparse mixture-of-experts routing, and a portfolio adaptation of group-relative policy optimization.
+Alex-Fin asks how a portfolio policy can combine observations arriving at different speeds, represent relationships between assets, and adapt as market conditions change. The research links native-frequency representations, graph-based temporal/spatial attention, a shared-and-routed expert module, and group-relative policy learning.
 
-The research manuscript reports **18.72% annualized return, 1.43 annualized Sharpe ratio, and 12.65% maximum drawdown** for its out-of-sample experiment. This public edition includes the authorized research source, an original architecture explanation, a transparent result record, and two practical learning cases. A public rerun of the manuscript experiment is pending; see the [evidence and reproduction requirements](docs/results.md).
+The author's research manuscript reports **18.72% annualized return, 1.43 annualized Sharpe, and 12.65% maximum drawdown magnitude** for January 2017–February 2026 out-of-sample coverage. The author confirms these are completed experiment results. This edition provides the manuscript record, authorized source, and detailed evidence review; a run manifest connecting the exact source revision to those historical results remains to be supplied.
 
-## What you can do here
+![Original Alex-Fin research architecture](docs/assets/manuscript/multifrequency-architecture.png)
 
-- Trace the full route from timestamped observations to feasible portfolio weights.
-- Work through small examples of causal data alignment, graph construction, transaction costs, and risk-adjusted rewards.
-- Audit a methodological claim or help turn the research description into a reproducible benchmark.
+*Original manuscript illustration: seven frequency branches, risk-graph construction, and the temporal/spatial encoder. This depicts the research design. [Case 1](cases/01-causal-multifrequency-graphs.md) follows the actual source and identifies where its tensor axes and graph use differ. The image is unchanged; [provenance](docs/assets/manuscript/README.md) records its source and hash.*
 
-This edition is useful for learners with basic Python, linear algebra, probability, and financial return calculations. Familiarity with attention or reinforcement learning helps, but each case introduces the concepts it uses.
+## What you can learn and inspect
 
-## Learning route
+Follow a complete reasoning chain: available observations → graph meaning → expert routing → feasible weights → return accounting → out-of-sample evidence. You can inspect a precise methodological claim, trace it to code, and submit a review without downloading market data or training a model.
 
-| Step | Material | Your deliverable |
+The intended reader knows basic Python, matrix algebra, probability, and simple financial returns. Each case introduces the formulas it uses and ends with a deliverable that another reader can assess.
+
+| Route | Read | Leave with |
 | --- | --- | --- |
-| 1. Understand the question | [Architecture](docs/architecture.md) | Draw the observation, decision, and execution timeline. |
-| 2. Build a defensible graph | [Case 1: causal multi-frequency graphs](cases/01-causal-multifrequency-graphs.md) | A timestamp audit and an explanation of what a graph edge means. |
-| 3. Evaluate a policy | [Case 2: costs, DSR, and policy comparison](cases/02-risk-rewards-and-evaluation.md) | A hand-checked reward calculation and an evaluation checklist. |
-| 4. Inspect the evidence | [Reported results](docs/results.md) | One result or protocol question supported by a source. |
-| 5. Contribute | [Contribution guide](CONTRIBUTING.md) | An issue or PR with calculations, sources, and expected behavior. |
+| Understand the research question | [Architecture](docs/architecture.md) and [full architecture work](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-architecture) | A map of observations, representations, actions, and execution. |
+| Trace the model | [Case 1: frequencies, graphs, experts, policy](cases/01-causal-multifrequency-graphs.md) | A tensor-axis trace, graph derivation, and interpretation of Tables 6-2 and 6-3. |
+| Assess the evidence | [Case 2: rewards, rolling evaluation, ablations](cases/02-risk-rewards-and-evaluation.md) | Every row of Tables 6-1, 6-4–6-7, and 7-1, with comparison conditions. |
+| Inspect implementation | [Source map and review](docs/source-status.md) | Concrete modules and the fidelity gaps to resolve. |
+| Make a first contribution | [Copyable review record](contributions/first-review.md) | An issue and focused PR connecting a claim, source, and proposed improvement. |
 
-## Research architecture
-
-```mermaid
-flowchart TB
-    A[Timestamped multi-frequency inputs] --> B[Graphs and temporal-spatial attention]
-    B --> C[Cross-frequency fusion and sparse experts]
-    C --> D[Portfolio policy, constraints and costs]
-    D --> E[Risk-adjusted reward and policy update]
-```
-
-The manuscript describes seven frequencies from seconds to quarters; a single graph-attention layer; one shared expert and eight routed experts with two active per token; and daily portfolio decisions. These are research specifications. [Architecture](docs/architecture.md) explains the mathematical interfaces and the points that require explicit implementation decisions before a full rerun.
-
-## Experiment record
+## What the existing experiment record says
 
 | Model | Annualized return | Annualized Sharpe | Maximum drawdown magnitude |
 | --- | ---: | ---: | ---: |
-| **Alex-Fin** | **18.72%** | **1.43** | **12.65%** |
+| Alex-Fin | 18.72% | 1.43 | 12.65% |
 | MVO | 7.35% | 0.33 | 33.03% |
 | PPO | 14.21% | 0.90 | 20.18% |
-| CSI 300 index | 4.26% | 0.09 | 40.12% |
+| CSI 300 | 4.26% | 0.09 | 40.12% |
 
-**Source:** author-supplied Alex-Fin research manuscript, Table 6-1. Values are manuscript-reported, rather than measurements produced by this documentation release. The stated test coverage is January 2017–February 2026. The [complete result record](docs/results.md) identifies assumptions, remaining evidence, and metric conventions.
+Source: manuscript Table 6-1. The [complete table register](docs/results.md) covers ten models, frequency settings, experts, optimization, market and volatility regimes, sectors, and ablations. The manuscript specifies five/one/one-year rolling training/validation/test windows, trading costs, and a 2.5% annual risk-free rate. Exact run configurations, daily outputs, and statistical resampling records remain necessary for independent reproduction.
 
-## Current materials and next milestones
+The deeper cases preserve uncertain and adverse findings: high-volatility Sharpe falls, market-regime dates have gaps, two prose interpretations conflict with their tables, and component ablation gaps are not additive contributions. Original reference images are distinguished from Alex-Fin illustrations; no borrowed convergence or ablation image is presented as an Alex-Fin result.
 
-| Area | Available now | Next deliverable |
-| --- | --- | --- |
-| Research explanation | Bilingual architecture and source notes | A versioned specification resolving timing, graph, and constraint details |
-| Education | Two bilingual cases with formulas, examples, exercises, and answers | Reviewed examples for each model module |
-| Results | Manuscript-reported comparison and reproduction checklist | Dated run manifest, daily portfolio values, costs, and seed-level results |
-| Implementation | [Model source and tests](docs/source-status.md), with revision hashes and an implementation review | Resolve the documented fidelity gaps, then freeze a reproduction environment |
+## Materials, status, and next deliverables
 
-The [source map](docs/source-status.md) connects the graph, encoder, expert, policy, reward, and training modules. It also records material differences between the source snapshot and manuscript design. Read those findings before interpreting any runner output. Model checkpoints and licensed financial datasets remain separate. [Microsoft Qlib](https://github.com/microsoft/qlib) is an upstream infrastructure reference with its own authorship and license.
+| Area | Available | Actual status | Next deliverable |
+| --- | --- | --- | --- |
+| Complete works | [Research paper](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-paper), [architecture work](https://github.com/Soros2040/julius-future/tree/main/works/alex-fin-architecture) | Chinese full text, PDF, original-figure record, bilingual guides | Resolve documented manuscript ambiguities. |
+| Learning cases | Two detailed cases in English and Chinese | Formulas, hand calculations, source navigation, all eight result tables, review tasks | Reviewed contributions for individual claims. |
+| Source | Authorized model and selected tests | Research snapshot with recorded hashes; implementation review published | Align graph, attention, execution, and evaluation contracts. |
+| Experiments | Historical manuscript tables | Author-reported completed experiments; no rerun in this edition | Exact run manifest, daily ledgers, configurations, and uncertainty records. |
 
-## Try a small check
+Key implementation findings include daily-derived frequency views, asset-axis attention labeled temporal, currently unused adjacency, computation of all experts despite sparse routing, and candidate selection using simulated outcomes during evaluation. These are specific source findings, not a claim about which revision produced the historical experiments. They guide future implementation work.
 
-With Python 3.12 or newer, the teaching arithmetic checks use only the standard library and the released reward module:
+## Contributions and project history
 
-```bash
-python -m unittest discover -s tests -p "test_case_arithmetic.py" -v
-```
+Julius presents the research problem, model architecture, and experiment narrative as part of a broader portfolio of financial and quantum research. The source package credits **Benjamin Team**; per-file revision and hash records remain in [the source manifest](docs/source-manifest.json). This edition distinguishes research design, team implementation, and upstream methods. Microsoft Qlib is an independently authored infrastructure reference.
 
-They check fees, DSR, and drawdown without downloading data or training a model. See the [source guide](docs/source-status.md) for dependency installation, module checks, and implementation findings.
+[BenjaminAgent](https://github.com/Soros2040/Fintelligence) develops financial research workflows; [Q-Fintelligence](https://github.com/Soros2040/Q-Fintelligence) focuses on quantum computing and quantum machine learning. [Julius' future](https://github.com/Soros2040/julius-future) connects complete works, project reflection, and future questions.
 
 ## First contributions
 
-| Task | Suggested output | Acceptance criterion | Status |
-| --- | --- | --- | --- |
-| Audit time availability | A worked example in Case 1 | Distinguishes observation time, publication time, and execution time | Open |
-| Specify graph meaning | A derivation linked from Architecture | Separates conditional dependence from forecast-error spillovers | Open |
-| Reconcile evaluation settings | A protocol note linked from Results | Documents date ranges, costs, risk-free conversion, and rebalance timing | Open |
+| Open task | Suggested location | Acceptance criterion |
+| --- | --- | --- |
+| Review a tensor axis or graph formula | `contributions/`, linked to Case 1 | Exact function, equation, and shape trace; source facts separated from proposals. |
+| Reconcile one result interpretation | `contributions/`, linked to Case 2 | Original table row, comparison conditions, and a supported wording change. |
+| Improve bilingual explanations | Matching English/Chinese case | Preserve equations, numbers, source locations, and evidence status. |
 
-Choose a task in an issue, describe the evidence you will use, and submit a focused PR. Contributions should make the research easier to understand or independently assess.
+Claim an issue → create a branch → submit a focused PR → respond to review → register the accepted contribution. The [contribution guide](CONTRIBUTING.md) and [worked example](contributions/example-review.md) explain this process. Full research runs are future work with an agreed protocol.
 
-## Sources and acknowledgments
+## Sources and license
 
-The research builds on portfolio theory, Graphical Lasso, graph attention, sparse experts, and policy optimization. Primary references and their specific roles are collected in [Sources](docs/sources.md). Microsoft Qlib remains the work of its upstream authors and contributors and is distributed under its own [MIT license](https://github.com/microsoft/qlib/blob/main/LICENSE).
+[Primary sources](docs/sources.md) explain portfolio theory, Graphical Lasso, attention, experts, and policy optimization. [Original figure provenance](docs/assets/manuscript/README.md) identifies unchanged manuscript assets. [NOTICE](NOTICE) records source attribution.
 
-Original code is licensed under [MIT](LICENSE); original documentation is licensed under [CC BY-NC-SA 4.0](LICENSE-DOCS). Third-party materials retain their own licenses. This project presents research and learning materials; reported historical returns do not predict future investment performance.
+Original code uses [MIT](LICENSE); original documentation uses [CC BY-NC-SA 4.0](LICENSE-DOCS). Third-party code, data, and referenced material retain their respective rights.
