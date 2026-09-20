@@ -1,0 +1,13 @@
+Alex-Fin public research edition
+
+The model source and selected tests were released with the project owner's
+authorization from source revision 333dd4f5434ba43335ff781f91298291f1532d52.
+The source package metadata credited Benjamin Team. Per-file source hashes
+and original relative locations are recorded in docs/source-manifest.json.
+
+Microsoft Qlib is a separately authored upstream quantitative research
+project. This edition links to Qlib and does not include its source tree.
+Qlib's own MIT license and upstream attribution continue to apply to Qlib.
+
+Original public documentation is licensed as stated in LICENSE-DOCS.
+The research manuscript and third-party financial datasets are not included.
