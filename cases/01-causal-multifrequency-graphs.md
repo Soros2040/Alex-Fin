@@ -16,42 +16,42 @@ The design poses four questions: which observations are available, which asset r
 
 ## 2. Establish availability before aligning frequencies
 
-The paper uses second, minute, hour, day, week, month, and quarter observations. Let $X_f\in\mathbb R^{T_f\times N\times d_f}$ denote time positions, assets, and input features. Projecting a patch of length $P_f$ to width $D$ gives:
+The paper uses second, minute, hour, day, week, month, and quarter observations. Let $`X_f\in\mathbb R^{T_f\times N\times d_f}`$ denote time positions, assets, and input features. Projecting a patch of length $`P_f`$ to width $`D`$ gives:
 
-$$
-z_{f,k,i}=W_f\operatorname{vec}(\operatorname{Norm}(X_{f,k,i}))+e_f+e_i.
-$$
+```math
+z_{f,k,i}=W_f\mathrm{vec}(\mathrm{Norm}(X_{f,k,i}))+e_f+e_i.
+```
 
-Frequency embeddings identify a branch; they cannot recover missing observations. Equal embedding width does not imply equal sequence length. The manuscript uses $D=256$ and eight attention heads; `TrainConfig` supplies these values, while standalone encoder defaults are $D=128$ and four heads.
+Frequency embeddings identify a branch; they cannot recover missing observations. Equal embedding width does not imply equal sequence length. The manuscript uses $`D=256`$ and eight attention heads; `TrainConfig` supplies these values, while standalone encoder defaults are $`D=128`$ and four heads.
 
 A close available at 15:01 can enter a 15:05 decision. A first-quarter statement published on April 30 cannot enter an April 29 decision because its reporting period ended on March 31. Preserve event time, availability time, and revision time. A valid attention mask satisfies
 
-$$
+```math
 M_{qk}=\begin{cases}0,&a_k\le t_q,\\-\infty,&a_k>t_q,\end{cases}
-\qquad \operatorname{Attention}(Q,K,V)=\operatorname{softmax}(QK^\top/\sqrt D+M)V.
-$$
+\qquad \mathrm{Attention}(Q,K,V)=\mathrm{softmax}(QK^\top/\sqrt D+M)V.
+```
 
-Here $a_k$ is availability, not row order. A quarterly token can attend to an earlier minute token if it satisfies the cutoff. A triangle over assets cannot enforce this temporal rule. The paper pairs decisions using the completed close with execution at the next opening.
+Here $`a_k`$ is availability, not row order. A quarterly token can attend to an earlier minute token if it satisfies the cutoff. A triangle over assets cannot enforce this temporal rule. The paper pairs decisions using the completed close with execution at the next opening.
 
 [`_build_multi_frequency_inputs`](../src/training/trainer.py) currently resamples daily closes into week, month, and quarter endpoints, calculates percentage changes, zero-pads history, and returns `[batch, asset, lookback]`. These are four views of daily data, not seven independently observed streams. A source review should record endpoint labels, incomplete periods, missingness, and whether each value existed at the cutoff.
 
 ## 3. Define what a graph edge means
 
-For covariance estimate $S$, Graphical Lasso estimates a sparse precision matrix:
+For covariance estimate $`S`$, Graphical Lasso estimates a sparse precision matrix:
 
-$$
-\widehat\Omega=\arg\min_{\Omega\succ0}\{\operatorname{tr}(S\Omega)-\log\det\Omega+\lambda\sum_{i\ne j}|\Omega_{ij}|\}.
-$$
+```math
+\widehat\Omega=\arg\min_{\Omega\succ0}\lbrace \mathrm{tr}(S\Omega)-\log\det\Omega+\lambda\sum_{i\ne j}|\Omega_{ij}|\rbrace .
+```
 
-Under a Gaussian interpretation, $\rho_{ij\mid-ij}=-\Omega_{ij}/\sqrt{\Omega_{ii}\Omega_{jj}}$ describes conditional association. Diagonal entries $4,9$ and off-diagonal entry $-3$ give $0.5$. This symmetric association does not establish intervention-based causation.
+Under a Gaussian interpretation, $`\rho_{ij\mid-ij}=-\Omega_{ij}/\sqrt{\Omega_{ii}\Omega_{jj}}`$ describes conditional association. Diagonal entries $`4,9`$ and off-diagonal entry $`-3`$ give $`0.5`$. This symmetric association does not establish intervention-based causation.
 
 The paper and [`_dy_decomposition`](../src/agents/glasso_dy.py) use a variance-weighted squared-precision expression:
 
-$$
+```math
 d_{ij}=\frac{\sigma_{jj}^{-1}\Omega_{ij}^{2}}{\sum_k\sigma_{kk}^{-1}\Omega_{ik}^{2}}.
-$$
+```
 
-For row $[2,1]$ and variances $[1,4]$, the components are $4/4.25\approx0.9412$ and $0.25/4.25\approx0.0588$. Squaring discards the sign. Different denominators can produce asymmetry, but neither operation introduces a forecast horizon.
+For row $`[2,1]`$ and variances $`[1,4]`$, the components are $`4/4.25\approx0.9412`$ and $`0.25/4.25\approx0.0588`$. Squaring discards the sign. Different denominators can produce asymmetry, but neither operation introduces a forecast horizon.
 
 A conventional generalized forecast-error variance decomposition additionally needs a fitted dynamic model, impulse-response matrices, innovation covariance, and horizon summation. The function accepts `H=5` but does not use it. Treat its output as the implemented graph proxy; interpreting it as a verified five-step Diebold–Yilmaz measure requires a separate derivation. [Primary references](../docs/sources.md).
 
@@ -65,9 +65,9 @@ A conventional generalized forecast-error variance decomposition additionally ne
 
 The manuscript proposes parallel temporal and spatial branches: mix valid times for one asset, and mix asset neighbors at a usable time. A graph-bias interface can be written as
 
-$$
-S_{ij}=q_i^\top k_j/\sqrt D+\beta A_{ij},\qquad h_i^{space}=\sum_j\operatorname{softmax}_j(S_{ij})v_j.
-$$
+```math
+S_{ij}=q_i^\top k_j/\sqrt D+\beta A_{ij},\qquad h_i^{space}=\sum_j\mathrm{softmax}_j(S_{ij})v_j.
+```
 
 A bias changes relative scores; a hard mask forbids edges. A specification must select its rule, including self-loops and zero edges, before claiming that a graph constrains attention. The manuscript then fuses branches and exchanges frequency tokens using timestamps.
 
@@ -88,12 +88,12 @@ Spatial attention also receives `h_time`, making this part sequential. This conc
 
 The design uses one shared expert and eight routed experts, selecting two routed outputs per token:
 
-$$
-y=x+E_{shared}(\operatorname{RMSNorm}(x))+
-\sum_{k\in\operatorname{Top2}(g(x)+b)}\widetilde p_k E_k(\operatorname{RMSNorm}(x)).
-$$
+```math
+y=x+E_{shared}(\mathrm{RMSNorm}(x))+
+\sum_{k\in\mathrm{Top2}(g(x)+b)}\widetilde p_k E_k(\mathrm{RMSNorm}(x)).
+```
 
-Selected probabilities $0.4$ and $0.2$ renormalize to $2/3$ and $1/3$. The shared path is always active. Specialization must be assessed with routing and representations; Top-2 alone cannot identify bull-market and bear-market experts.
+Selected probabilities $`0.4`$ and $`0.2`$ renormalize to $`2/3`$ and $`1/3`$. The shared path is always active. Specialization must be assessed with routing and representations; Top-2 alone cannot identify bull-market and bear-market experts.
 
 [`AdaptiveMoE.forward`](../src/agents/moe.py) implements RMSNorm, SwiGLU, Top-2 weights, bias updates, and residual LayerNorm. Three distinctions matter:
 
@@ -117,7 +117,7 @@ All rows of manuscript Tables 6-2 and 6-3 appear below. They belong to the state
 | Low frequency only: week/month/quarter | 9.84% | 0.57 | -26.83% |
 | Conventional up/downsampled alignment | 12.47% | 0.83 | -21.69% |
 
-Daily-only Sharpe declines by $1.43-0.92=0.51$, or $35.66\%$. This motivates checking extra information. It does not isolate coverage, capacity, alignment, or tuning-budget effects. A fair comparison needs those controls. The current daily-data builder cannot alone recreate the seven-frequency comparison.
+Daily-only Sharpe declines by $`1.43-0.92=0.51`$, or $`35.66\%`$. This motivates checking extra information. It does not isolate coverage, capacity, alignment, or tuning-budget effects. A fair comparison needs those controls. The current daily-data builder cannot alone recreate the seven-frequency comparison.
 
 ### Table 6-3 — Experts across regimes
 

@@ -16,42 +16,42 @@
 
 ## 2. 先确定可得性，再讨论频率对齐
 
-稿件使用秒、分钟、小时、日、周、月、季度观测。令 $X_f\in\mathbb R^{T_f\times N\times d_f}$ 分别表示时间位置、资产和输入特征。长度为 $P_f$ 的片段投影到宽度 $D$：
+稿件使用秒、分钟、小时、日、周、月、季度观测。令 $`X_f\in\mathbb R^{T_f\times N\times d_f}`$ 分别表示时间位置、资产和输入特征。长度为 $`P_f`$ 的片段投影到宽度 $`D`$：
 
-$$
-z_{f,k,i}=W_f\operatorname{vec}(\operatorname{Norm}(X_{f,k,i}))+e_f+e_i.
-$$
+```math
+z_{f,k,i}=W_f\mathrm{vec}(\mathrm{Norm}(X_{f,k,i}))+e_f+e_i.
+```
 
-频率嵌入标识分支，不能恢复缺失的观测；相同的嵌入宽度也不意味着序列长度相同。稿件使用 $D=256$ 和八个注意力头，`TrainConfig` 提供这些值；编码器独立构造时的默认值则是 $D=128$ 和四个头。
+频率嵌入标识分支，不能恢复缺失的观测；相同的嵌入宽度也不意味着序列长度相同。稿件使用 $`D=256`$ 和八个注意力头，`TrainConfig` 提供这些值；编码器独立构造时的默认值则是 $`D=128`$ 和四个头。
 
 15:01 可用的收盘价可以进入 15:05 的决策；4 月 30 日发布的一季报不能因为报告期结束于 3 月 31 日就进入 4 月 29 日的决策。应保留事件时间、可得时间与修订时间。有效的注意力掩码满足
 
-$$
+```math
 M_{qk}=\begin{cases}0,&a_k\le t_q,\\-\infty,&a_k>t_q,\end{cases}
-\qquad \operatorname{Attention}(Q,K,V)=\operatorname{softmax}(QK^\top/\sqrt D+M)V.
-$$
+\qquad \mathrm{Attention}(Q,K,V)=\mathrm{softmax}(QK^\top/\sqrt D+M)V.
+```
 
-这里 $a_k$ 是信息可得时间，而非行号。季度 Token 可以关注满足截点的更早分钟 Token；在资产轴上画三角形不能建立这种时间约束。稿件将使用完整收盘信息的决策与下一交易日开盘执行相连接。
+这里 $`a_k`$ 是信息可得时间，而非行号。季度 Token 可以关注满足截点的更早分钟 Token；在资产轴上画三角形不能建立这种时间约束。稿件将使用完整收盘信息的决策与下一交易日开盘执行相连接。
 
 [`_build_multi_frequency_inputs`](../src/training/trainer.py) 当前把日收盘价重采样成周、月、季末值，计算收益率、补零，返回 `[batch, asset, lookback]`。这是日数据的四种视图，并非七种独立观测流。源码核查需要记录周期标签、未完成周期、缺失状态，以及各值在决策截点是否已经可得。
 
 ## 3. 说明图的一条边代表什么
 
-给定协方差估计 $S$，Graphical Lasso 估计稀疏精度矩阵：
+给定协方差估计 $`S`$，Graphical Lasso 估计稀疏精度矩阵：
 
-$$
-\widehat\Omega=\arg\min_{\Omega\succ0}\{\operatorname{tr}(S\Omega)-\log\det\Omega+\lambda\sum_{i\ne j}|\Omega_{ij}|\}.
-$$
+```math
+\widehat\Omega=\arg\min_{\Omega\succ0}\lbrace \mathrm{tr}(S\Omega)-\log\det\Omega+\lambda\sum_{i\ne j}|\Omega_{ij}|\rbrace .
+```
 
-在高斯解释下，$\rho_{ij\mid-ij}=-\Omega_{ij}/\sqrt{\Omega_{ii}\Omega_{jj}}$ 表示条件关联。对角元素为 $4,9$、非对角元素为 $-3$ 时得到 $0.5$。这种对称关联不能直接证明干预意义上的因果关系。
+在高斯解释下，$`\rho_{ij\mid-ij}=-\Omega_{ij}/\sqrt{\Omega_{ii}\Omega_{jj}}`$ 表示条件关联。对角元素为 $`4,9`$、非对角元素为 $`-3`$ 时得到 $`0.5`$。这种对称关联不能直接证明干预意义上的因果关系。
 
 稿件和 [`_dy_decomposition`](../src/agents/glasso_dy.py) 使用方差加权的精度矩阵平方表达式：
 
-$$
+```math
 d_{ij}=\frac{\sigma_{jj}^{-1}\Omega_{ij}^{2}}{\sum_k\sigma_{kk}^{-1}\Omega_{ik}^{2}}.
-$$
+```
 
-对行 $[2,1]$ 和方差 $[1,4]$，两个分量为 $4/4.25\approx0.9412$ 与 $0.25/4.25\approx0.0588$。平方去掉了关联符号，不同分母可以产生非对称性，但这两个操作都没有引入预测步长。
+对行 $`[2,1]`$ 和方差 $`[1,4]`$，两个分量为 $`4/4.25\approx0.9412`$ 与 $`0.25/4.25\approx0.0588`$。平方去掉了关联符号，不同分母可以产生非对称性，但这两个操作都没有引入预测步长。
 
 常规广义预测误差方差分解还需要拟合动态模型、脉冲响应矩阵、创新协方差与预测期求和。函数接收 `H=5` 却没有使用它。因此应把当前输出作为已实现的图代理量研究；若要将其解释为经过验证的五步 Diebold–Yilmaz 度量，还需要单独推导。[原始方法文献](../docs/sources.md)。
 
@@ -65,9 +65,9 @@ $$
 
 稿件提出并行时间与空间分支：前者混合同一资产的有效时间，后者混合同一可用时点的资产邻居。图偏置接口可写为
 
-$$
-S_{ij}=q_i^\top k_j/\sqrt D+\beta A_{ij},\qquad h_i^{space}=\sum_j\operatorname{softmax}_j(S_{ij})v_j.
-$$
+```math
+S_{ij}=q_i^\top k_j/\sqrt D+\beta A_{ij},\qquad h_i^{space}=\sum_j\mathrm{softmax}_j(S_{ij})v_j.
+```
 
 偏置改变相对评分，硬掩码禁止某些边。规格必须先确定规则、自环和零边的处理方式，才能说明图怎样约束注意力。稿件随后融合分支，并依据时间戳交换频率 Token。
 
@@ -88,12 +88,12 @@ $$
 
 设计使用一个共享专家、八个路由专家，每个 Token 选择两个路由输出：
 
-$$
-y=x+E_{shared}(\operatorname{RMSNorm}(x))+
-\sum_{k\in\operatorname{Top2}(g(x)+b)}\widetilde p_k E_k(\operatorname{RMSNorm}(x)).
-$$
+```math
+y=x+E_{shared}(\mathrm{RMSNorm}(x))+
+\sum_{k\in\mathrm{Top2}(g(x)+b)}\widetilde p_k E_k(\mathrm{RMSNorm}(x)).
+```
 
-被选中的概率 $0.4$ 和 $0.2$ 会重新归一化为 $2/3$ 和 $1/3$；共享路径始终激活。专业化需要通过路由和表征来评估，Top-2 本身无法识别所谓牛市专家、熊市专家。
+被选中的概率 $`0.4`$ 和 $`0.2`$ 会重新归一化为 $`2/3`$ 和 $`1/3`$；共享路径始终激活。专业化需要通过路由和表征来评估，Top-2 本身无法识别所谓牛市专家、熊市专家。
 
 [`AdaptiveMoE.forward`](../src/agents/moe.py) 实现了 RMSNorm、SwiGLU、Top-2 权重、偏置更新与残差 LayerNorm。三个区别影响研究结论：
 
@@ -117,7 +117,7 @@ $$
 | 仅低频：周、月、季度 | 9.84% | 0.57 | -26.83% |
 | 传统上下采样对齐 | 12.47% | 0.83 | -21.69% |
 
-仅日度夏普下降 $1.43-0.92=0.51$，相对下降 $35.66\%$。这提示值得核查额外信息，却未单独区分数据覆盖、容量、对齐和调参预算的影响。公平比较需要控制这些条件；当前日数据构造器不能独自重建七频率比较。
+仅日度夏普下降 $`1.43-0.92=0.51`$，相对下降 $`35.66\%`$。这提示值得核查额外信息，却未单独区分数据覆盖、容量、对齐和调参预算的影响。公平比较需要控制这些条件；当前日数据构造器不能独自重建七频率比较。
 
 ### 表 6-3：不同市场中的专家模块
 
