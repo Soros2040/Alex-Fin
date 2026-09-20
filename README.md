@@ -31,16 +31,11 @@ This edition is useful for learners with basic Python, linear algebra, probabili
 ## Research architecture
 
 ```mermaid
-flowchart LR
-    A[Timestamped observations] --> B[Native-frequency patches]
-    A --> C[Frequency-specific graph estimation]
-    B --> D[Temporal attention and spatial GAT]
-    C --> D
-    D --> E[Causal cross-frequency attention]
-    E --> F[Shared expert and sparse routed experts]
-    F --> G[Policy and portfolio constraints]
-    G --> H[Execution and cost accounting]
-    H --> I[DSR reward and group-relative updates]
+flowchart TB
+    A[Timestamped multi-frequency inputs] --> B[Graphs and temporal-spatial attention]
+    B --> C[Cross-frequency fusion and sparse experts]
+    C --> D[Portfolio policy, constraints and costs]
+    D --> E[Risk-adjusted reward and policy update]
 ```
 
 The manuscript describes seven frequencies from seconds to quarters; a single graph-attention layer; one shared expert and eight routed experts with two active per token; and daily portfolio decisions. These are research specifications. [Architecture](docs/architecture.md) explains the mathematical interfaces and the points that require explicit implementation decisions before a full rerun.
